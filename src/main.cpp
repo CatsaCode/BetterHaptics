@@ -97,49 +97,20 @@ MAKE_HOOK_MATCH(
     return false;
 }
 
-/*
-normalPreset.duration: 0.13
-chainHeadPreset.duration: 0.13
-chainLinkPreset.duration: 0.13
-bombPreset.duration: 0.13
-badCutPreset.duration: 0.13
-arcHeadPreset.duration: 0.13
-arcTailPreset.duration: 0.13
-arcHeadAndTailPreset.duration: 0.13
-
-normalPreset.strength: 1
-chainHeadPreset.strength: 1
-chainLinkPreset.strength: 1
-bombPreset.strength: 1
-badCutPreset.strength: 1
-arcHeadPreset.strength: 1
-arcTailPreset.strength: 1
-arcHeadAndTailPreset.strength: 1
-
-normalPreset.frequency: 0.5
-chainHeadPreset.frequency: 0.5
-chainLinkPreset.frequency: 0.5
-bombPreset.frequency: 0.5
-badCutPreset.frequency: 0.5
-arcHeadPreset.frequency: 0.5
-arcTailPreset.frequency: 0.5
-arcHeadAndTailPreset.frequency: 0.5
-*/
-
+const float DEFAULT_HAPTIC_DURATION = 0.13f;
 MAKE_HOOK_MATCH(
     NoteCutHapticEffect_HitNote,
     &GlobalNamespace::NoteCutHapticEffect::HitNote, void,
     GlobalNamespace::NoteCutHapticEffect* self, GlobalNamespace::SaberType saberType, GlobalNamespace::NoteCutHapticEffect::Type type
 ) {
-    PaperLogger.debug("CAT_DEBUG &NoteCutHapticEffect: {}", fmt::ptr(self));
-    self->_normalPreset->_duration = getBetterHapticsConfig().noteStrength.GetValue() * 0.13f;
-    self->_chainHeadPreset->_duration = getBetterHapticsConfig().chainHeadStrength.GetValue() * 0.13f;
-    self->_chainLinkPreset->_duration = getBetterHapticsConfig().chainLinkStrength.GetValue() * 0.13f;
-    self->_bombPreset->_duration = getBetterHapticsConfig().bombStrength.GetValue() * 0.13f;
-    self->_badCutPreset->_duration = getBetterHapticsConfig().badCutStrength.GetValue() * 0.13f;
-    self->_arcHeadPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * 0.13f;
-    self->_arcTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * 0.13f;
-    self->_arcHeadAndTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * 0.13f;
+    self->_normalPreset->_duration = getBetterHapticsConfig().noteStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
+    self->_chainHeadPreset->_duration = getBetterHapticsConfig().chainHeadStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
+    self->_chainLinkPreset->_duration = getBetterHapticsConfig().chainLinkStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
+    self->_bombPreset->_duration = getBetterHapticsConfig().bombStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
+    self->_badCutPreset->_duration = getBetterHapticsConfig().badCutStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
+    self->_arcHeadPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
+    self->_arcTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
+    self->_arcHeadAndTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
 
     NoteCutHapticEffect_HitNote(self, saberType, type);
 }
