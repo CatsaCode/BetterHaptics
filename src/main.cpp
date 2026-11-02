@@ -8,6 +8,8 @@
 
 #include "GlobalNamespace/SaberType.hpp"
 
+#include "VRUIControls/VRInputModule.hpp"
+
 static modloader::ModInfo modInfo{MOD_ID, VERSION, 0};
 // Stores the ID and version of our mod, and is sent to
 // the modloader upon startup
@@ -15,6 +17,7 @@ static modloader::ModInfo modInfo{MOD_ID, VERSION, 0};
 DECLARE_CONFIG(BetterHapticsConfig) {
     CONFIG_VALUE(globalBypass, bool, "globalBypass", false);
     CONFIG_VALUE(separateArcs, bool, "separateArcs", true);
+    CONFIG_VALUE(uiStrength, float, "uiStrength", 1);
     CONFIG_VALUE(noteStrength, float, "noteStrength", 1);
     CONFIG_VALUE(chainHeadStrength, float, "chainHeadStrength", 1);
     CONFIG_VALUE(chainLinkStrength, float, "chainLinkStrength", 1);
@@ -97,22 +100,38 @@ MAKE_HOOK_MATCH(
     return false;
 }
 
-const float DEFAULT_HAPTIC_DURATION = 0.13f;
 MAKE_HOOK_MATCH(
     NoteCutHapticEffect_HitNote,
     &GlobalNamespace::NoteCutHapticEffect::HitNote, void,
     GlobalNamespace::NoteCutHapticEffect* self, GlobalNamespace::SaberType saberType, GlobalNamespace::NoteCutHapticEffect::Type type
 ) {
-    self->_normalPreset->_duration = getBetterHapticsConfig().noteStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
-    self->_chainHeadPreset->_duration = getBetterHapticsConfig().chainHeadStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
-    self->_chainLinkPreset->_duration = getBetterHapticsConfig().chainLinkStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
-    self->_bombPreset->_duration = getBetterHapticsConfig().bombStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
-    self->_badCutPreset->_duration = getBetterHapticsConfig().badCutStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
-    self->_arcHeadPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
-    self->_arcTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
-    self->_arcHeadAndTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_HAPTIC_DURATION;
+    constexpr float DEFAULT_DURATION = 0.13f;
+
+    self->_normalPreset->_duration = getBetterHapticsConfig().noteStrength.GetValue() * DEFAULT_DURATION;
+    self->_chainHeadPreset->_duration = getBetterHapticsConfig().chainHeadStrength.GetValue() * DEFAULT_DURATION;
+    self->_chainLinkPreset->_duration = getBetterHapticsConfig().chainLinkStrength.GetValue() * DEFAULT_DURATION;
+    self->_bombPreset->_duration = getBetterHapticsConfig().bombStrength.GetValue() * DEFAULT_DURATION;
+    self->_badCutPreset->_duration = getBetterHapticsConfig().badCutStrength.GetValue() * DEFAULT_DURATION;
+    self->_arcHeadPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_DURATION;
+    self->_arcTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_DURATION;
+    self->_arcHeadAndTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_DURATION;
 
     NoteCutHapticEffect_HitNote(self, saberType, type);
+}
+
+MAKE_HOOK_MATCH(
+    VRInputModule_HandlePointerExitAndEnter,
+    &VRUIControls::VRInputModule::HandlePointerExitAndEnter, void,
+    VRUIControls::VRInputModule* self, UnityEngine::EventSystems::PointerEventData* pointerEventData, UnityEngine::GameObject* newEnterTarget
+) {
+    PaperLogger.debug("CAT_DEBUG VRUIControls duration: {}, strength: {}, frequency: {}",
+        self->_rumblePreset->_duration, self->_rumblePreset->_strength, self->_rumblePreset->_frequency);
+
+    constexpr float DEFAULT_DURATION = 0.13f;
+
+    self->_rumblePreset->_duration = getBetterHapticsConfig().uiStrength.GetValue() * DEFAULT_DURATION;
+
+    VRInputModule_HandlePointerExitAndEnter(self, pointerEventData, newEnterTarget);
 }
 
 void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
@@ -152,6 +171,7 @@ MOD_EXTERN_FUNC void late_load() noexcept {
     INSTALL_HOOK(PaperLogger, NoteCutCoreEffectsSpawner_PlayHitChainNoteHapticEffect);
     INSTALL_HOOK(PaperLogger, OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset);
     INSTALL_HOOK(PaperLogger, NoteCutHapticEffect_HitNote);
+    INSTALL_HOOK(PaperLogger, VRInputModule_HandlePointerExitAndEnter);
 
     PaperLogger.info("Installed all hooks!");
 }
