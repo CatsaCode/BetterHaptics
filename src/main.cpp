@@ -6,6 +6,8 @@
 
 #include "GlobalNamespace/OculusAdvancedHapticFeedbackPlayer.hpp"
 
+#include "GlobalNamespace/SaberType.hpp"
+
 static modloader::ModInfo modInfo{MOD_ID, VERSION, 0};
 // Stores the ID and version of our mod, and is sent to
 // the modloader upon startup
@@ -13,6 +15,12 @@ static modloader::ModInfo modInfo{MOD_ID, VERSION, 0};
 DECLARE_CONFIG(BetterHapticsConfig) {
     CONFIG_VALUE(globalBypass, bool, "globalBypass", false);
     CONFIG_VALUE(separateArcs, bool, "separateArcs", true);
+    CONFIG_VALUE(noteStrength, float, "noteStrength", 1);
+    CONFIG_VALUE(chainHeadStrength, float, "chainHeadStrength", 1);
+    CONFIG_VALUE(chainLinkStrength, float, "chainLinkStrength", 1);
+    CONFIG_VALUE(bombStrength, float, "bombStrength", 1);
+    CONFIG_VALUE(badCutStrength, float, "badCutStrength", 1);
+    CONFIG_VALUE(arcHeadTailStrength, float, "arcHeadTailStrength", 1);
 };
 
 bool get_global_bypass() {
@@ -89,6 +97,53 @@ MAKE_HOOK_MATCH(
     return false;
 }
 
+/*
+normalPreset.duration: 0.13
+chainHeadPreset.duration: 0.13
+chainLinkPreset.duration: 0.13
+bombPreset.duration: 0.13
+badCutPreset.duration: 0.13
+arcHeadPreset.duration: 0.13
+arcTailPreset.duration: 0.13
+arcHeadAndTailPreset.duration: 0.13
+
+normalPreset.strength: 1
+chainHeadPreset.strength: 1
+chainLinkPreset.strength: 1
+bombPreset.strength: 1
+badCutPreset.strength: 1
+arcHeadPreset.strength: 1
+arcTailPreset.strength: 1
+arcHeadAndTailPreset.strength: 1
+
+normalPreset.frequency: 0.5
+chainHeadPreset.frequency: 0.5
+chainLinkPreset.frequency: 0.5
+bombPreset.frequency: 0.5
+badCutPreset.frequency: 0.5
+arcHeadPreset.frequency: 0.5
+arcTailPreset.frequency: 0.5
+arcHeadAndTailPreset.frequency: 0.5
+*/
+
+MAKE_HOOK_MATCH(
+    NoteCutHapticEffect_HitNote,
+    &GlobalNamespace::NoteCutHapticEffect::HitNote, void,
+    GlobalNamespace::NoteCutHapticEffect* self, GlobalNamespace::SaberType saberType, GlobalNamespace::NoteCutHapticEffect::Type type
+) {
+    PaperLogger.debug("CAT_DEBUG &NoteCutHapticEffect: {}", fmt::ptr(self));
+    self->_normalPreset->_duration = getBetterHapticsConfig().noteStrength.GetValue() * 0.13f;
+    self->_chainHeadPreset->_duration = getBetterHapticsConfig().chainHeadStrength.GetValue() * 0.13f;
+    self->_chainLinkPreset->_duration = getBetterHapticsConfig().chainLinkStrength.GetValue() * 0.13f;
+    self->_bombPreset->_duration = getBetterHapticsConfig().bombStrength.GetValue() * 0.13f;
+    self->_badCutPreset->_duration = getBetterHapticsConfig().badCutStrength.GetValue() * 0.13f;
+    self->_arcHeadPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * 0.13f;
+    self->_arcTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * 0.13f;
+    self->_arcHeadAndTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * 0.13f;
+
+    NoteCutHapticEffect_HitNote(self, saberType, type);
+}
+
 void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (!firstActivation)
         return;
@@ -97,6 +152,13 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
 
     BSML::Lite::CreateToggle(container, "Global Bypass", get_global_bypass(), set_global_bypass);
     BSML::Lite::CreateToggle(container, "Separate Arcs", get_separate_arcs(), set_separate_arcs);
+
+    BSML::Lite::CreateSliderSetting(container, "Note", 0.1, getBetterHapticsConfig().noteStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Chain Head", 0.1, getBetterHapticsConfig().chainHeadStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Chain Link", 0.1, getBetterHapticsConfig().chainLinkStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Bomb", 0.1, getBetterHapticsConfig().bombStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Bad Cut", 0.1, getBetterHapticsConfig().badCutStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Arc Head / Tail", 0.1, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
 }
 
 // Called later on in the game loading - a good time to install function hooks
@@ -118,6 +180,7 @@ MOD_EXTERN_FUNC void late_load() noexcept {
     INSTALL_HOOK(PaperLogger, NoteCutCoreEffectsSpawner_PlayHitNoteHapticEffect);
     INSTALL_HOOK(PaperLogger, NoteCutCoreEffectsSpawner_PlayHitChainNoteHapticEffect);
     INSTALL_HOOK(PaperLogger, OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset);
+    INSTALL_HOOK(PaperLogger, NoteCutHapticEffect_HitNote);
 
     PaperLogger.info("Installed all hooks!");
 }
