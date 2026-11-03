@@ -1,12 +1,9 @@
 #include "main.hpp"
 
-#include "GlobalNamespace/NoteCutCoreEffectsSpawner.hpp"
-#include "GlobalNamespace/NoteCutInfo.hpp"
 #include "GlobalNamespace/NoteCutHapticEffect.hpp"
+#include "GlobalNamespace/SaberType.hpp"
 
 #include "GlobalNamespace/OculusAdvancedHapticFeedbackPlayer.hpp"
-
-#include "GlobalNamespace/SaberType.hpp"
 
 #include "VRUIControls/VRInputModule.hpp"
 
@@ -15,8 +12,7 @@ static modloader::ModInfo modInfo{MOD_ID, VERSION, 0};
 // the modloader upon startup
 
 DECLARE_CONFIG(BetterHapticsConfig) {
-    CONFIG_VALUE(globalBypass, bool, "globalBypass", false);
-    CONFIG_VALUE(separateArcs, bool, "separateArcs", true);
+    CONFIG_VALUE(enabled, bool, "enabled", true);
     CONFIG_VALUE(uiStrength, float, "uiStrength", 1);
     CONFIG_VALUE(noteStrength, float, "noteStrength", 1);
     CONFIG_VALUE(chainHeadStrength, float, "chainHeadStrength", 1);
@@ -25,22 +21,6 @@ DECLARE_CONFIG(BetterHapticsConfig) {
     CONFIG_VALUE(badCutStrength, float, "badCutStrength", 1);
     CONFIG_VALUE(arcHeadTailStrength, float, "arcHeadTailStrength", 1);
 };
-
-bool get_global_bypass() {
-    return getBetterHapticsConfig().globalBypass.GetValue();
-}
-
-void set_global_bypass(bool globalBypass) {
-    getBetterHapticsConfig().globalBypass.SetValue(globalBypass);
-}
-
-bool get_separate_arcs() {
-    return getBetterHapticsConfig().separateArcs.GetValue();
-}
-
-void set_separate_arcs(bool separateArcs) {
-    getBetterHapticsConfig().separateArcs.SetValue(separateArcs);
-}
 
 // Called at the early stages of game loading
 MOD_EXTERN_FUNC void setup(CModInfo *info) noexcept {
@@ -53,51 +33,14 @@ MOD_EXTERN_FUNC void setup(CModInfo *info) noexcept {
 }
 
 MAKE_HOOK_MATCH(
-    NoteCutCoreEffectsSpawner_PlayHitNoteHapticEffect,
-    &GlobalNamespace::NoteCutCoreEffectsSpawner::PlayHitNoteHapticEffect, void,
-    GlobalNamespace::NoteCutCoreEffectsSpawner *self, GlobalNamespace::NoteCutInfo noteCutInfo, GlobalNamespace::NoteData *noteData
-) {
-    if (get_global_bypass() || get_separate_arcs()) {
-        NoteCutCoreEffectsSpawner_PlayHitNoteHapticEffect(self, noteCutInfo, noteData);
-        return;
-    }
-
-    if (!noteCutInfo.allIsOK) {
-        self->_noteCutHapticEffect->HitNote(noteCutInfo.saberType, GlobalNamespace::NoteCutHapticEffect::Type::BadCut);
-    } else {
-        self->_noteCutHapticEffect->HitNote(noteCutInfo.saberType, GlobalNamespace::NoteCutHapticEffect::Type::Normal);
-    }
-}
-
-MAKE_HOOK_MATCH(
-    NoteCutCoreEffectsSpawner_PlayHitChainNoteHapticEffect,
-    &GlobalNamespace::NoteCutCoreEffectsSpawner::PlayHitChainNoteHapticEffect, void,
-    GlobalNamespace::NoteCutCoreEffectsSpawner *self, GlobalNamespace::NoteCutInfo noteCutInfo, bool isChainHead
-) {
-    if (get_global_bypass()) {
-        NoteCutCoreEffectsSpawner_PlayHitChainNoteHapticEffect(self, noteCutInfo, isChainHead);
-        return;
-    }
-
-    if (!noteCutInfo.allIsOK) {
-        self->_noteCutHapticEffect->HitNote(noteCutInfo.saberType, GlobalNamespace::NoteCutHapticEffect::Type::BadCut);
-    } else if (isChainHead) {
-        self->_noteCutHapticEffect->HitNote(noteCutInfo.saberType, GlobalNamespace::NoteCutHapticEffect::Type::ChainHead);
-    } else {
-        self->_noteCutHapticEffect->HitNote(noteCutInfo.saberType, GlobalNamespace::NoteCutHapticEffect::Type::ChainLink);
-    }
-}
-
-MAKE_HOOK_MATCH(
     OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset,
     &GlobalNamespace::OculusAdvancedHapticFeedbackPlayer::CanPlayHapticPreset, bool,
     GlobalNamespace::OculusAdvancedHapticFeedbackPlayer *self, Libraries::HM::HMLib::VR::HapticPresetSO *hapticPreset, UnityEngine::XR::XRNode node
 ) {
-    if (get_global_bypass()) {
-        return OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset(self, hapticPreset, node);
-    }
+    if (getBetterHapticsConfig().enabled.GetValue())
+        return false;
 
-    return false;
+    return OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset(self, hapticPreset, node);
 }
 
 MAKE_HOOK_MATCH(
@@ -105,16 +48,17 @@ MAKE_HOOK_MATCH(
     &GlobalNamespace::NoteCutHapticEffect::HitNote, void,
     GlobalNamespace::NoteCutHapticEffect* self, GlobalNamespace::SaberType saberType, GlobalNamespace::NoteCutHapticEffect::Type type
 ) {
-    constexpr float DEFAULT_DURATION = 0.13f;
+    if (!getBetterHapticsConfig().enabled.GetValue())
+        return NoteCutHapticEffect_HitNote(self, saberType, type);
 
-    self->_normalPreset->_duration = getBetterHapticsConfig().noteStrength.GetValue() * DEFAULT_DURATION;
-    self->_chainHeadPreset->_duration = getBetterHapticsConfig().chainHeadStrength.GetValue() * DEFAULT_DURATION;
-    self->_chainLinkPreset->_duration = getBetterHapticsConfig().chainLinkStrength.GetValue() * DEFAULT_DURATION;
-    self->_bombPreset->_duration = getBetterHapticsConfig().bombStrength.GetValue() * DEFAULT_DURATION;
-    self->_badCutPreset->_duration = getBetterHapticsConfig().badCutStrength.GetValue() * DEFAULT_DURATION;
-    self->_arcHeadPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_DURATION;
-    self->_arcTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_DURATION;
-    self->_arcHeadAndTailPreset->_duration = getBetterHapticsConfig().arcHeadTailStrength.GetValue() * DEFAULT_DURATION;
+    self->_normalPreset->_strength = getBetterHapticsConfig().noteStrength.GetValue();
+    self->_chainHeadPreset->_strength = getBetterHapticsConfig().chainHeadStrength.GetValue();
+    self->_chainLinkPreset->_strength = getBetterHapticsConfig().chainLinkStrength.GetValue();
+    self->_bombPreset->_strength = getBetterHapticsConfig().bombStrength.GetValue();
+    self->_badCutPreset->_strength = getBetterHapticsConfig().badCutStrength.GetValue();
+    self->_arcHeadPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
+    self->_arcTailPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
+    self->_arcHeadAndTailPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
 
     NoteCutHapticEffect_HitNote(self, saberType, type);
 }
@@ -124,12 +68,10 @@ MAKE_HOOK_MATCH(
     &VRUIControls::VRInputModule::HandlePointerExitAndEnter, void,
     VRUIControls::VRInputModule* self, UnityEngine::EventSystems::PointerEventData* pointerEventData, UnityEngine::GameObject* newEnterTarget
 ) {
-    PaperLogger.debug("CAT_DEBUG VRUIControls duration: {}, strength: {}, frequency: {}",
-        self->_rumblePreset->_duration, self->_rumblePreset->_strength, self->_rumblePreset->_frequency);
+    if (!getBetterHapticsConfig().enabled.GetValue())
+        return;
 
-    constexpr float DEFAULT_DURATION = 0.13f;
-
-    self->_rumblePreset->_duration = getBetterHapticsConfig().uiStrength.GetValue() * DEFAULT_DURATION;
+    self->_rumblePreset->_strength = getBetterHapticsConfig().uiStrength.GetValue();
 
     VRInputModule_HandlePointerExitAndEnter(self, pointerEventData, newEnterTarget);
 }
@@ -140,15 +82,15 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
 
     auto* container = BSML::Lite::CreateScrollableSettingsContainer(self->transform);
 
-    BSML::Lite::CreateToggle(container, "Global Bypass", get_global_bypass(), set_global_bypass);
-    BSML::Lite::CreateToggle(container, "Separate Arcs", get_separate_arcs(), set_separate_arcs);
+    BSML::Lite::CreateToggle(container, "Enable", getBetterHapticsConfig().enabled.GetValue(), [](bool value){getBetterHapticsConfig().enabled.SetValue(value);});
 
-    BSML::Lite::CreateSliderSetting(container, "Note", 0.1, getBetterHapticsConfig().noteStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);});
-    BSML::Lite::CreateSliderSetting(container, "Chain Head", 0.1, getBetterHapticsConfig().chainHeadStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);});
-    BSML::Lite::CreateSliderSetting(container, "Chain Link", 0.1, getBetterHapticsConfig().chainLinkStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);});
-    BSML::Lite::CreateSliderSetting(container, "Bomb", 0.1, getBetterHapticsConfig().bombStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);});
-    BSML::Lite::CreateSliderSetting(container, "Bad Cut", 0.1, getBetterHapticsConfig().badCutStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);});
-    BSML::Lite::CreateSliderSetting(container, "Arc Head / Tail", 0.1, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "UI", 0.1, getBetterHapticsConfig().uiStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().uiStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Note", 0.1, getBetterHapticsConfig().noteStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Chain Head", 0.1, getBetterHapticsConfig().chainHeadStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Chain Link", 0.1, getBetterHapticsConfig().chainLinkStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Bomb", 0.1, getBetterHapticsConfig().bombStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Bad Cut", 0.1, getBetterHapticsConfig().badCutStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Arc Head / Tail", 0.1, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
 }
 
 // Called later on in the game loading - a good time to install function hooks
@@ -167,8 +109,6 @@ MOD_EXTERN_FUNC void late_load() noexcept {
 
     PaperLogger.info("Installing hooks...");
 
-    INSTALL_HOOK(PaperLogger, NoteCutCoreEffectsSpawner_PlayHitNoteHapticEffect);
-    INSTALL_HOOK(PaperLogger, NoteCutCoreEffectsSpawner_PlayHitChainNoteHapticEffect);
     INSTALL_HOOK(PaperLogger, OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset);
     INSTALL_HOOK(PaperLogger, NoteCutHapticEffect_HitNote);
     INSTALL_HOOK(PaperLogger, VRInputModule_HandlePointerExitAndEnter);
