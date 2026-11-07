@@ -150,7 +150,7 @@ MOD_EXTERN_FUNC void late_load() noexcept {
     BSML::Init();
 
     BSML::Register::RegisterMainMenuViewControllerMethod(
-        "BetterHaptics by Crunkle",
+        "BetterHaptics",
         "BetterHaptics",
         "",
         viewControllerDidActivate
