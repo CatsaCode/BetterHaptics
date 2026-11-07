@@ -1,9 +1,10 @@
 #include "main.hpp"
 
 #include "GlobalNamespace/NoteCutHapticEffect.hpp"
+#include "GlobalNamespace/SliderHapticFeedbackInteractionEffect.hpp"
+#include "GlobalNamespace/ObstacleSaberSparkleEffectManager.hpp"
 #include "GlobalNamespace/SaberType.hpp"
 #include "GlobalNamespace/SaberClashEffect.hpp"
-#include "GlobalNamespace/ObstacleSaberSparkleEffectManager.hpp"
 
 #include "GlobalNamespace/OculusAdvancedHapticFeedbackPlayer.hpp"
 
@@ -22,6 +23,7 @@ DECLARE_CONFIG(BetterHapticsConfig) {
     CONFIG_VALUE(arcHeadTailStrength, float, "arcHeadTailStrength", 1);
     CONFIG_VALUE(bombStrength, float, "bombStrength", 1);
     CONFIG_VALUE(badCutStrength, float, "badCutStrength", 1);
+    CONFIG_VALUE(arcStrength, float, "arcStrength", 0.75);
     CONFIG_VALUE(wallStrength, float, "wallStrength", 0.75);
     CONFIG_VALUE(saberClashStrength, float, "saberClashStrength", 0.75);
 };
@@ -81,6 +83,19 @@ MAKE_HOOK_MATCH(
 }
 
 MAKE_HOOK_MATCH(
+    SliderHapticFeedbackInteractionEffect_Vibrate,
+    &GlobalNamespace::SliderHapticFeedbackInteractionEffect::Vibrate, void,
+    GlobalNamespace::SliderHapticFeedbackInteractionEffect* self
+) {
+    if (!getBetterHapticsConfig().enabled.GetValue())
+        return SliderHapticFeedbackInteractionEffect_Vibrate(self);
+
+    self->_hapticPreset->_strength = getBetterHapticsConfig().arcStrength.GetValue();
+
+    SliderHapticFeedbackInteractionEffect_Vibrate(self);
+}
+
+MAKE_HOOK_MATCH(
     ObstacleSaberSparkleEffectManager_Update,
     &GlobalNamespace::ObstacleSaberSparkleEffectManager::Update, void,
     GlobalNamespace::ObstacleSaberSparkleEffectManager* self
@@ -121,6 +136,7 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
     BSML::Lite::CreateSliderSetting(container, "Arc Head / Tail", 0.1, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
     BSML::Lite::CreateSliderSetting(container, "Bomb", 0.1, getBetterHapticsConfig().bombStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);});
     BSML::Lite::CreateSliderSetting(container, "Bad Cut", 0.1, getBetterHapticsConfig().badCutStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Arc", 0.1, getBetterHapticsConfig().arcStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().arcStrength.SetValue(value);});
     BSML::Lite::CreateSliderSetting(container, "Wall", 0.1, getBetterHapticsConfig().wallStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().wallStrength.SetValue(value);});
     BSML::Lite::CreateSliderSetting(container, "Saber Clash", 0.1, getBetterHapticsConfig().saberClashStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().saberClashStrength.SetValue(value);});
 }
@@ -144,6 +160,7 @@ MOD_EXTERN_FUNC void late_load() noexcept {
     INSTALL_HOOK(PaperLogger, OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset);
     INSTALL_HOOK(PaperLogger, VRInputModule_HandlePointerExitAndEnter);
     INSTALL_HOOK(PaperLogger, NoteCutHapticEffect_HitNote);
+    INSTALL_HOOK(PaperLogger, SliderHapticFeedbackInteractionEffect_Vibrate);
     INSTALL_HOOK(PaperLogger, ObstacleSaberSparkleEffectManager_Update);
     INSTALL_HOOK(PaperLogger, SaberClashEffect_LateUpdate);
 
