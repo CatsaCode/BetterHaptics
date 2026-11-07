@@ -2,6 +2,7 @@
 
 #include "GlobalNamespace/NoteCutHapticEffect.hpp"
 #include "GlobalNamespace/SaberType.hpp"
+#include "GlobalNamespace/SaberClashEffect.hpp"
 
 #include "GlobalNamespace/OculusAdvancedHapticFeedbackPlayer.hpp"
 
@@ -17,9 +18,10 @@ DECLARE_CONFIG(BetterHapticsConfig) {
     CONFIG_VALUE(noteStrength, float, "noteStrength", 1);
     CONFIG_VALUE(chainHeadStrength, float, "chainHeadStrength", 1);
     CONFIG_VALUE(chainLinkStrength, float, "chainLinkStrength", 1);
+    CONFIG_VALUE(arcHeadTailStrength, float, "arcHeadTailStrength", 1);
     CONFIG_VALUE(bombStrength, float, "bombStrength", 1);
     CONFIG_VALUE(badCutStrength, float, "badCutStrength", 1);
-    CONFIG_VALUE(arcHeadTailStrength, float, "arcHeadTailStrength", 1);
+    CONFIG_VALUE(saberClashStrength, float, "saberClashStrength", 0.75);
 };
 
 // Called at the early stages of game loading
@@ -54,11 +56,11 @@ MAKE_HOOK_MATCH(
     self->_normalPreset->_strength = getBetterHapticsConfig().noteStrength.GetValue();
     self->_chainHeadPreset->_strength = getBetterHapticsConfig().chainHeadStrength.GetValue();
     self->_chainLinkPreset->_strength = getBetterHapticsConfig().chainLinkStrength.GetValue();
-    self->_bombPreset->_strength = getBetterHapticsConfig().bombStrength.GetValue();
-    self->_badCutPreset->_strength = getBetterHapticsConfig().badCutStrength.GetValue();
     self->_arcHeadPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
     self->_arcTailPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
     self->_arcHeadAndTailPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
+    self->_bombPreset->_strength = getBetterHapticsConfig().bombStrength.GetValue();
+    self->_badCutPreset->_strength = getBetterHapticsConfig().badCutStrength.GetValue();
 
     NoteCutHapticEffect_HitNote(self, saberType, type);
 }
@@ -69,11 +71,24 @@ MAKE_HOOK_MATCH(
     VRUIControls::VRInputModule* self, UnityEngine::EventSystems::PointerEventData* pointerEventData, UnityEngine::GameObject* newEnterTarget
 ) {
     if (!getBetterHapticsConfig().enabled.GetValue())
-        return;
+        return VRInputModule_HandlePointerExitAndEnter(self, pointerEventData, newEnterTarget);
 
     self->_rumblePreset->_strength = getBetterHapticsConfig().uiStrength.GetValue();
 
     VRInputModule_HandlePointerExitAndEnter(self, pointerEventData, newEnterTarget);
+}
+
+MAKE_HOOK_MATCH(
+    SaberClashEffect_LateUpdate,
+    &GlobalNamespace::SaberClashEffect::LateUpdate, void,
+    GlobalNamespace::SaberClashEffect* self
+) {
+    if (!getBetterHapticsConfig().enabled.GetValue())
+        return SaberClashEffect_LateUpdate(self);
+
+    self->_rumblePreset->_strength = getBetterHapticsConfig().saberClashStrength.GetValue();
+
+    SaberClashEffect_LateUpdate(self);
 }
 
 void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
@@ -88,9 +103,10 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
     BSML::Lite::CreateSliderSetting(container, "Note", 0.1, getBetterHapticsConfig().noteStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);});
     BSML::Lite::CreateSliderSetting(container, "Chain Head", 0.1, getBetterHapticsConfig().chainHeadStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);});
     BSML::Lite::CreateSliderSetting(container, "Chain Link", 0.1, getBetterHapticsConfig().chainLinkStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Arc Head / Tail", 0.1, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
     BSML::Lite::CreateSliderSetting(container, "Bomb", 0.1, getBetterHapticsConfig().bombStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);});
     BSML::Lite::CreateSliderSetting(container, "Bad Cut", 0.1, getBetterHapticsConfig().badCutStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);});
-    BSML::Lite::CreateSliderSetting(container, "Arc Head / Tail", 0.1, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
+    BSML::Lite::CreateSliderSetting(container, "Saber Clash", 0.1, getBetterHapticsConfig().saberClashStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().saberClashStrength.SetValue(value);});
 }
 
 // Called later on in the game loading - a good time to install function hooks
@@ -112,6 +128,7 @@ MOD_EXTERN_FUNC void late_load() noexcept {
     INSTALL_HOOK(PaperLogger, OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset);
     INSTALL_HOOK(PaperLogger, NoteCutHapticEffect_HitNote);
     INSTALL_HOOK(PaperLogger, VRInputModule_HandlePointerExitAndEnter);
+    INSTALL_HOOK(PaperLogger, SaberClashEffect_LateUpdate);
 
     PaperLogger.info("Installed all hooks!");
 }
