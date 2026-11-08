@@ -176,6 +176,25 @@
     },
     {
       "dependency": {
+        "id": "paper2_scotland2",
+        "versionRange": "=4.8.0",
+        "additionalData": {
+          "soLink": "https://github.com/Fernthedev/paperlog/releases/download/v4.8.0/libpaper2_scotland2.so",
+          "overrideSoName": "libpaper2_scotland2.so",
+          "modLink": "https://github.com/Fernthedev/paperlog/releases/download/v4.8.0/paper2_scotland2.qmod",
+          "branchName": "version/v4_8_0",
+          "compileOptions": {
+            "systemIncludes": [
+              "shared/utfcpp/source"
+            ]
+          },
+          "cmake": false
+        }
+      },
+      "version": "4.8.0"
+    },
+    {
+      "dependency": {
         "id": "tinyxml2",
         "versionRange": "=10.0.0",
         "additionalData": {
