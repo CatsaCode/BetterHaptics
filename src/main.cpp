@@ -1,16 +1,21 @@
 #include "main.hpp"
 
+#include "scotland2/shared/modloader.h"
+#include "config-utils/shared/config-utils.hpp"
+#include "beatsaber-hook/shared/hooking.hpp"
+#include "bsml/shared/BSML.hpp"
+
 #include "GlobalNamespace/NoteCutHapticEffect.hpp"
 #include "GlobalNamespace/SliderHapticFeedbackInteractionEffect.hpp"
 #include "GlobalNamespace/ObstacleSaberSparkleEffectManager.hpp"
 #include "GlobalNamespace/SaberType.hpp"
 #include "GlobalNamespace/SaberClashEffect.hpp"
 
-#include "GlobalNamespace/OculusAdvancedHapticFeedbackPlayer.hpp"
+#include "BeatSaber/Haptics/OculusAdvancedHapticFeedbackPlayer.hpp"
 
 #include "VRUIControls/VRInputModule.hpp"
 
-using namespace Libraries::HM::HMLib::VR;
+using HapticPresetSO = BeatSaber::Haptics::HapticPresetSO;
 
 static modloader::ModInfo modInfo{MOD_ID, VERSION, 0};
 // Stores the ID and version of our mod, and is sent to
@@ -32,16 +37,6 @@ DECLARE_CONFIG(BetterHapticsConfig) {
     CONFIG_VALUE(saberClashStrength, float, "saberClashStrength", 0.75);
 };
 
-// Called at the early stages of game loading
-MOD_EXTERN_FUNC void setup(CModInfo *info) noexcept {
-    *info = modInfo.to_c();
-
-    // File logging
-    Paper::Logger::RegisterFileContextId(PaperLogger.tag);
-
-    PaperLogger.info("Completed setup!");
-}
-
 HapticPresetSO* copyHapticPreset(HapticPresetSO* hapticPreset) {
     auto* newHapticPreset = HapticPresetSO::New_ctor();
     newHapticPreset->_duration = hapticPreset->_duration;
@@ -49,13 +44,11 @@ HapticPresetSO* copyHapticPreset(HapticPresetSO* hapticPreset) {
     newHapticPreset->_frequency = hapticPreset->_frequency;
     newHapticPreset->_continuous = hapticPreset->_continuous;
     newHapticPreset->_useAdvancedHapticsOnSupportedPlatforms = hapticPreset->_useAdvancedHapticsOnSupportedPlatforms;
-    newHapticPreset->_ps5HapticsClip = hapticPreset->_ps5HapticsClip;
-    newHapticPreset->_hasPS5HapticsClip = hapticPreset->_hasPS5HapticsClip;
     newHapticPreset->_oculusHapticsClip = hapticPreset->_oculusHapticsClip;
-    newHapticPreset->_hasOculusHapticsClip = hapticPreset->_hasOculusHapticsClip;
     newHapticPreset->_priority = hapticPreset->_priority;
     newHapticPreset->_overrideForTouchController = hapticPreset->_overrideForTouchController;
     newHapticPreset->_touchControllerOverrideHapticsClip = hapticPreset->_touchControllerOverrideHapticsClip;
+    newHapticPreset->_hasOculusHapticsClip = hapticPreset->_hasOculusHapticsClip;
     return newHapticPreset;
 }
 
@@ -71,8 +64,8 @@ void setHapticPresetOverflowStrength(HapticPresetSO* hapticPreset, float strengt
 
 MAKE_HOOK_MATCH(
     OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset,
-    &GlobalNamespace::OculusAdvancedHapticFeedbackPlayer::CanPlayHapticPreset, bool,
-    GlobalNamespace::OculusAdvancedHapticFeedbackPlayer *self, HapticPresetSO *hapticPreset, UnityEngine::XR::XRNode node
+    &BeatSaber::Haptics::OculusAdvancedHapticFeedbackPlayer::CanPlayHapticPreset, bool,
+    BeatSaber::Haptics::OculusAdvancedHapticFeedbackPlayer *self, HapticPresetSO *hapticPreset, UnityEngine::XR::XRNode node
 ) {
     if (getBetterHapticsConfig().enabled.GetValue())
         return false;
@@ -197,12 +190,26 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
     BSML::Lite::AddHoverHint(saberClashSlider, "Default 0.75");
 }
 
-// Called later on in the game loading - a good time to install function hooks
-MOD_EXTERN_FUNC void late_load() noexcept {
-    il2cpp_functions::Init();
+// Called in the early stages of game loading
+// (see https://github.com/sc2ad/scotland2?tab=readme-ov-file#installationusage)
+// Often used to initialize and load configs, in addition to its contents here
+extern "C" __attribute__((visibility("default")))
+void setup(CModInfo* info) noexcept {
+    *info = modInfo.to_c();
+
+    // Paper::Logger::RegisterFileContextId(MOD_ID);
+
+    logger.info("Completed setup!");
+}
+
+// Called later on in the game loading, after all mods have been opened
+// Often used to install hooks and use the APIs of other mods or libraries
+extern "C" __attribute__((visibility("default")))
+void late_load() noexcept {
+    i2c::functions::initialize();
+    BSML::Init();
 
     getBetterHapticsConfig().Init(modInfo);
-    BSML::Init();
 
     BSML::Register::RegisterMainMenuViewControllerMethod(
         "BetterHaptics",
@@ -211,14 +218,12 @@ MOD_EXTERN_FUNC void late_load() noexcept {
         viewControllerDidActivate
     );
 
-    PaperLogger.info("Installing hooks...");
+    INSTALL_HOOK(logger, OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset);
+    INSTALL_HOOK(logger, VRInputModule_HandlePointerExitAndEnter);
+    INSTALL_HOOK(logger, NoteCutHapticEffect_HitNote);
+    INSTALL_HOOK(logger, SliderHapticFeedbackInteractionEffect_Vibrate);
+    INSTALL_HOOK(logger, ObstacleSaberSparkleEffectManager_Update);
+    INSTALL_HOOK(logger, SaberClashEffect_LateUpdate);
 
-    INSTALL_HOOK(PaperLogger, OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset);
-    INSTALL_HOOK(PaperLogger, VRInputModule_HandlePointerExitAndEnter);
-    INSTALL_HOOK(PaperLogger, NoteCutHapticEffect_HitNote);
-    INSTALL_HOOK(PaperLogger, SliderHapticFeedbackInteractionEffect_Vibrate);
-    INSTALL_HOOK(PaperLogger, ObstacleSaberSparkleEffectManager_Update);
-    INSTALL_HOOK(PaperLogger, SaberClashEffect_LateUpdate);
-
-    PaperLogger.info("Installed all hooks!");
+    logger.info("Completed load!");
 }
