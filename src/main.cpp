@@ -57,6 +57,16 @@ HapticPresetSO* copyHapticPreset(HapticPresetSO* hapticPreset) {
     return newHapticPreset;
 }
 
+void setHapticPresetOverflowStrength(HapticPresetSO* hapticPreset, float strength, float defaultDuration) {
+    if (strength <= 1) {
+        hapticPreset->_strength = strength;
+        hapticPreset->_duration = defaultDuration;
+    } else {
+        hapticPreset->_strength = 1;
+        hapticPreset->_duration = defaultDuration + (strength - 1);
+    }
+}
+
 MAKE_HOOK_MATCH(
     OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset,
     &GlobalNamespace::OculusAdvancedHapticFeedbackPlayer::CanPlayHapticPreset, bool,
@@ -76,7 +86,8 @@ MAKE_HOOK_MATCH(
     if (!getBetterHapticsConfig().enabled.GetValue())
         return VRInputModule_HandlePointerExitAndEnter(self, pointerEventData, newEnterTarget);
 
-    self->_rumblePreset->_strength = getBetterHapticsConfig().uiStrength.GetValue();
+    constexpr float DEFAULT_DURATION = 0.01;
+    setHapticPresetOverflowStrength(self->_rumblePreset, getBetterHapticsConfig().uiStrength.GetValue(), DEFAULT_DURATION);
 
     VRInputModule_HandlePointerExitAndEnter(self, pointerEventData, newEnterTarget);
 }
@@ -96,14 +107,15 @@ MAKE_HOOK_MATCH(
     if (self->_arcHeadAndTailPreset == self->_normalPreset)
         self->_arcHeadAndTailPreset = copyHapticPreset(self->_normalPreset);
 
-    self->_normalPreset->_strength = getBetterHapticsConfig().noteStrength.GetValue();
-    self->_chainHeadPreset->_strength = getBetterHapticsConfig().chainHeadStrength.GetValue();
-    self->_chainLinkPreset->_strength = getBetterHapticsConfig().chainLinkStrength.GetValue();
-    self->_arcHeadPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
-    self->_arcTailPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
-    self->_arcHeadAndTailPreset->_strength = getBetterHapticsConfig().arcHeadTailStrength.GetValue();
-    self->_bombPreset->_strength = getBetterHapticsConfig().bombStrength.GetValue();
-    self->_badCutPreset->_strength = getBetterHapticsConfig().badCutStrength.GetValue();
+    constexpr float DEFAULT_DURATION = 0.13;
+    setHapticPresetOverflowStrength(self->_normalPreset, getBetterHapticsConfig().noteStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_chainHeadPreset, getBetterHapticsConfig().chainHeadStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_chainLinkPreset, getBetterHapticsConfig().chainLinkStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_arcHeadPreset, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_arcTailPreset, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_arcHeadAndTailPreset, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_bombPreset, getBetterHapticsConfig().bombStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_badCutPreset, getBetterHapticsConfig().badCutStrength.GetValue(), DEFAULT_DURATION);
 
     NoteCutHapticEffect_HitNote(self, saberType, type);
 }
@@ -155,14 +167,14 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
 
     BSML::Lite::CreateToggle(container, "Enable", getBetterHapticsConfig().enabled.GetValue(), [](bool value){getBetterHapticsConfig().enabled.SetValue(value);});
 
-    const float increment = 0.05;
-    auto* uiSlider = BSML::Lite::CreateSliderSetting(container, "UI", increment, getBetterHapticsConfig().uiStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().uiStrength.SetValue(value);});
-    auto* noteSlider = BSML::Lite::CreateSliderSetting(container, "Notes", increment, getBetterHapticsConfig().noteStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);});
-    auto* chainHeadSlider = BSML::Lite::CreateSliderSetting(container, "Chain Heads", increment, getBetterHapticsConfig().chainHeadStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);});
-    auto* chainLinkSlider = BSML::Lite::CreateSliderSetting(container, "Chain Links", increment, getBetterHapticsConfig().chainLinkStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);});
-    auto* arcHeadTailSlider = BSML::Lite::CreateSliderSetting(container, "Arc Heads / Tails", increment, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
-    auto* bombSlider = BSML::Lite::CreateSliderSetting(container, "Bombs", increment, getBetterHapticsConfig().bombStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);});
-    auto* badCutSlider = BSML::Lite::CreateSliderSetting(container, "Bad Cuts", increment, getBetterHapticsConfig().badCutStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);});
+    constexpr float increment = 0.05;
+    auto* uiSlider = BSML::Lite::CreateSliderSetting(container, "UI", increment, getBetterHapticsConfig().uiStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().uiStrength.SetValue(value);});
+    auto* noteSlider = BSML::Lite::CreateSliderSetting(container, "Notes", increment, getBetterHapticsConfig().noteStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);});
+    auto* chainHeadSlider = BSML::Lite::CreateSliderSetting(container, "Chain Heads", increment, getBetterHapticsConfig().chainHeadStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);});
+    auto* chainLinkSlider = BSML::Lite::CreateSliderSetting(container, "Chain Links", increment, getBetterHapticsConfig().chainLinkStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);});
+    auto* arcHeadTailSlider = BSML::Lite::CreateSliderSetting(container, "Arc Heads / Tails", increment, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
+    auto* bombSlider = BSML::Lite::CreateSliderSetting(container, "Bombs", increment, getBetterHapticsConfig().bombStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);});
+    auto* badCutSlider = BSML::Lite::CreateSliderSetting(container, "Bad Cuts", increment, getBetterHapticsConfig().badCutStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);});
     auto* arcSlider = BSML::Lite::CreateSliderSetting(container, "Arcs", increment, getBetterHapticsConfig().arcStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().arcStrength.SetValue(value);});
     auto* wallSlider = BSML::Lite::CreateSliderSetting(container, "Walls", increment, getBetterHapticsConfig().wallStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().wallStrength.SetValue(value);});
     auto* saberClashSlider = BSML::Lite::CreateSliderSetting(container, "Saber Clash", increment, getBetterHapticsConfig().saberClashStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().saberClashStrength.SetValue(value);});
