@@ -10,6 +10,8 @@
 
 #include "VRUIControls/VRInputModule.hpp"
 
+using namespace Libraries::HM::HMLib::VR;
+
 static modloader::ModInfo modInfo{MOD_ID, VERSION, 0};
 // Stores the ID and version of our mod, and is sent to
 // the modloader upon startup
@@ -38,10 +40,27 @@ MOD_EXTERN_FUNC void setup(CModInfo *info) noexcept {
     PaperLogger.info("Completed setup!");
 }
 
+HapticPresetSO* copyHapticPreset(HapticPresetSO* hapticPreset) {
+    auto* newHapticPreset = HapticPresetSO::New_ctor();
+    newHapticPreset->_duration = hapticPreset->_duration;
+    newHapticPreset->_strength = hapticPreset->_strength;
+    newHapticPreset->_frequency = hapticPreset->_frequency;
+    newHapticPreset->_continuous = hapticPreset->_continuous;
+    newHapticPreset->_useAdvancedHapticsOnSupportedPlatforms = hapticPreset->_useAdvancedHapticsOnSupportedPlatforms;
+    newHapticPreset->_ps5HapticsClip = hapticPreset->_ps5HapticsClip;
+    newHapticPreset->_hasPS5HapticsClip = hapticPreset->_hasPS5HapticsClip;
+    newHapticPreset->_oculusHapticsClip = hapticPreset->_oculusHapticsClip;
+    newHapticPreset->_hasOculusHapticsClip = hapticPreset->_hasOculusHapticsClip;
+    newHapticPreset->_priority = hapticPreset->_priority;
+    newHapticPreset->_overrideForTouchController = hapticPreset->_overrideForTouchController;
+    newHapticPreset->_touchControllerOverrideHapticsClip = hapticPreset->_touchControllerOverrideHapticsClip;
+    return newHapticPreset;
+}
+
 MAKE_HOOK_MATCH(
     OculusAdvancedHapticFeedbackPlayer_CanPlayHapticPreset,
     &GlobalNamespace::OculusAdvancedHapticFeedbackPlayer::CanPlayHapticPreset, bool,
-    GlobalNamespace::OculusAdvancedHapticFeedbackPlayer *self, Libraries::HM::HMLib::VR::HapticPresetSO *hapticPreset, UnityEngine::XR::XRNode node
+    GlobalNamespace::OculusAdvancedHapticFeedbackPlayer *self, HapticPresetSO *hapticPreset, UnityEngine::XR::XRNode node
 ) {
     if (getBetterHapticsConfig().enabled.GetValue())
         return false;
@@ -69,6 +88,13 @@ MAKE_HOOK_MATCH(
 ) {
     if (!getBetterHapticsConfig().enabled.GetValue())
         return NoteCutHapticEffect_HitNote(self, saberType, type);
+
+    if (self->_arcHeadPreset == self->_normalPreset)
+        self->_arcHeadPreset = copyHapticPreset(self->_normalPreset);
+    if (self->_arcTailPreset == self->_normalPreset)
+        self->_arcTailPreset = copyHapticPreset(self->_normalPreset);
+    if (self->_arcHeadAndTailPreset == self->_normalPreset)
+        self->_arcHeadAndTailPreset = copyHapticPreset(self->_normalPreset);
 
     self->_normalPreset->_strength = getBetterHapticsConfig().noteStrength.GetValue();
     self->_chainHeadPreset->_strength = getBetterHapticsConfig().chainHeadStrength.GetValue();
