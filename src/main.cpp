@@ -22,6 +22,8 @@ DECLARE_CONFIG(BetterHapticsConfig) {
     CONFIG_VALUE(noteStrength, float, "noteStrength", 1);
     CONFIG_VALUE(chainHeadStrength, float, "chainHeadStrength", 1);
     CONFIG_VALUE(chainLinkStrength, float, "chainLinkStrength", 1);
+    CONFIG_VALUE(arcHeadStrength, float, "arcHeadStrength", 1);
+    CONFIG_VALUE(arcTailStrength, float, "arcTailStrength", 1);
     CONFIG_VALUE(arcHeadTailStrength, float, "arcHeadTailStrength", 1);
     CONFIG_VALUE(bombStrength, float, "bombStrength", 1);
     CONFIG_VALUE(badCutStrength, float, "badCutStrength", 1);
@@ -111,8 +113,8 @@ MAKE_HOOK_MATCH(
     setHapticPresetOverflowStrength(self->_normalPreset, getBetterHapticsConfig().noteStrength.GetValue(), DEFAULT_DURATION);
     setHapticPresetOverflowStrength(self->_chainHeadPreset, getBetterHapticsConfig().chainHeadStrength.GetValue(), DEFAULT_DURATION);
     setHapticPresetOverflowStrength(self->_chainLinkPreset, getBetterHapticsConfig().chainLinkStrength.GetValue(), DEFAULT_DURATION);
-    setHapticPresetOverflowStrength(self->_arcHeadPreset, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), DEFAULT_DURATION);
-    setHapticPresetOverflowStrength(self->_arcTailPreset, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_arcHeadPreset, getBetterHapticsConfig().arcHeadStrength.GetValue(), DEFAULT_DURATION);
+    setHapticPresetOverflowStrength(self->_arcTailPreset, getBetterHapticsConfig().arcTailStrength.GetValue(), DEFAULT_DURATION);
     setHapticPresetOverflowStrength(self->_arcHeadAndTailPreset, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), DEFAULT_DURATION);
     setHapticPresetOverflowStrength(self->_bombPreset, getBetterHapticsConfig().bombStrength.GetValue(), DEFAULT_DURATION);
     setHapticPresetOverflowStrength(self->_badCutPreset, getBetterHapticsConfig().badCutStrength.GetValue(), DEFAULT_DURATION);
@@ -172,7 +174,9 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
     auto* noteSlider = BSML::Lite::CreateSliderSetting(container, "Notes", increment, getBetterHapticsConfig().noteStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);});
     auto* chainHeadSlider = BSML::Lite::CreateSliderSetting(container, "Chain Heads", increment, getBetterHapticsConfig().chainHeadStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);});
     auto* chainLinkSlider = BSML::Lite::CreateSliderSetting(container, "Chain Links", increment, getBetterHapticsConfig().chainLinkStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);});
-    auto* arcHeadTailSlider = BSML::Lite::CreateSliderSetting(container, "Arc Heads / Tails", increment, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
+    auto* arcHeadSlider = BSML::Lite::CreateSliderSetting(container, "Arc Heads", increment, getBetterHapticsConfig().arcHeadStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().arcHeadStrength.SetValue(value);});
+    auto* arcTailSlider = BSML::Lite::CreateSliderSetting(container, "Arc Tails", increment, getBetterHapticsConfig().arcTailStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().arcTailStrength.SetValue(value);});
+    auto* arcHeadTailSlider = BSML::Lite::CreateSliderSetting(container, "Arc Head & Tails", increment, getBetterHapticsConfig().arcHeadTailStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);});
     auto* bombSlider = BSML::Lite::CreateSliderSetting(container, "Bombs", increment, getBetterHapticsConfig().bombStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);});
     auto* badCutSlider = BSML::Lite::CreateSliderSetting(container, "Bad Cuts", increment, getBetterHapticsConfig().badCutStrength.GetValue(), 0, 2, [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);});
     auto* arcSlider = BSML::Lite::CreateSliderSetting(container, "Arcs", increment, getBetterHapticsConfig().arcStrength.GetValue(), 0, 1, [](float value){getBetterHapticsConfig().arcStrength.SetValue(value);});
@@ -183,6 +187,8 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
     BSML::Lite::AddHoverHint(noteSlider, "Default 1");
     BSML::Lite::AddHoverHint(chainHeadSlider, "Default 1");
     BSML::Lite::AddHoverHint(chainLinkSlider, "Default 1");
+    BSML::Lite::AddHoverHint(arcHeadSlider, "Default 1");
+    BSML::Lite::AddHoverHint(arcTailSlider, "Default 1");
     BSML::Lite::AddHoverHint(arcHeadTailSlider, "Default 1");
     BSML::Lite::AddHoverHint(bombSlider, "Default 1");
     BSML::Lite::AddHoverHint(badCutSlider, "Default 1");
