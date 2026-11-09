@@ -92,7 +92,6 @@ MAKE_HOOK_MATCH(
     if (!getBetterHapticsConfig().enabled.GetValue())
         return VRInputModule_HandlePointerExitAndEnter(self, pointerEventData, newEnterTarget);
 
-    // constexpr float defaultDuration = 0.01;
     self->_rumblePreset->_strength = getBetterHapticsConfig().uiStrength.GetValue();
     self->_rumblePreset->_duration = getBetterHapticsConfig().uiDuration.GetValue();
 
@@ -123,7 +122,6 @@ MAKE_HOOK_MATCH(
     self->_bombPreset->_strength = getBetterHapticsConfig().bombStrength.GetValue();
     self->_badCutPreset->_strength = getBetterHapticsConfig().badCutStrength.GetValue();
 
-    // constexpr float defaultDuration = 0.13;
     self->_normalPreset->_duration = getBetterHapticsConfig().noteDuration.GetValue();
     self->_chainHeadPreset->_duration = getBetterHapticsConfig().chainHeadDuration.GetValue();
     self->_chainLinkPreset->_duration = getBetterHapticsConfig().chainLinkDuration.GetValue();
@@ -175,11 +173,26 @@ MAKE_HOOK_MATCH(
     SaberClashEffect_LateUpdate(self);
 }
 
-BSML::SliderSetting* createStrengthSlider(const BSML::Lite::TransformWrapper& parent, StringW label, float currentStrength, std::function<void(float)> onStrengthChange = nullptr) {
+void createSliderDefaultIndicator(BSML::SliderSetting* sliderSetting, float defaultValue) {
+    auto slidingAreaTemplate = sliderSetting->transform->Find("BSMLSlider/SlidingArea")->gameObject;
+
+    auto defaultIndicatorContainer = UnityEngine::GameObject::Instantiate(slidingAreaTemplate, sliderSetting->transform->Find("BSMLSlider"));
+    defaultIndicatorContainer->name = "DefaultIndicator";
+    defaultIndicatorContainer->transform->SetSiblingIndex(1);
+
+    UnityEngine::GameObject::Destroy(defaultIndicatorContainer->transform->Find("Value")->gameObject);
+
+    auto defaultIndicator = defaultIndicatorContainer->transform->Find("Handle");
+    defaultIndicator->GetComponent<UnityEngine::RectTransform*>()->anchoredPosition = {defaultValue * 33, 0};
+    defaultIndicator->GetComponent<HMUI::ImageView*>()->color = {1, 1, 1, 0.25};
+}
+
+BSML::SliderSetting* createStrengthSlider(const BSML::Lite::TransformWrapper& parent, StringW label, float defaultStrength, float currentStrength, std::function<void(float)> onStrengthChange = nullptr) {
     auto* horizontal = BSML::Lite::CreateHorizontalLayoutGroup(parent);
 
     auto* strengthSlider = BSML::Lite::CreateSliderSetting(horizontal, label, 0.05, currentStrength, 0, 1, onStrengthChange);
     strengthSlider->GetComponent<UnityEngine::UI::LayoutElement*>()->preferredWidth = 65;
+    createSliderDefaultIndicator(strengthSlider, defaultStrength);
 
     // strengthSlider really, really does not want to listen to preferredWidth or sizeDelta or anything
     auto* spacer = UnityEngine::GameObject::New_ctor("Spacer");
@@ -191,15 +204,17 @@ BSML::SliderSetting* createStrengthSlider(const BSML::Lite::TransformWrapper& pa
     return strengthSlider;
 }
 
-UnityEngine::GameObject* createStrengthDurationSlider(const BSML::Lite::TransformWrapper& parent, StringW label, float currentStrength, float currentDuration, std::function<void(float)> onStrengthChange = nullptr, std::function<void(float)> onDurationChange = nullptr) {
+UnityEngine::GameObject* createStrengthDurationSlider(const BSML::Lite::TransformWrapper& parent, StringW label, float defaultStrength, float defaultDuration, float currentStrength, float currentDuration, std::function<void(float)> onStrengthChange = nullptr, std::function<void(float)> onDurationChange = nullptr) {
     auto* horizontal = BSML::Lite::CreateHorizontalLayoutGroup(parent);
 
     auto* strengthSlider = BSML::Lite::CreateSliderSetting(horizontal, label, 0.05, currentStrength, 0, 1, onStrengthChange);
     strengthSlider->GetComponent<UnityEngine::UI::LayoutElement*>()->preferredWidth = 65;
+    createSliderDefaultIndicator(strengthSlider, defaultStrength);
 
     auto* durationSlider = BSML::Lite::CreateSliderSetting(horizontal, label, 0.01, currentDuration, 0, 1, onDurationChange);
     UnityEngine::GameObject::Destroy(durationSlider->transform->Find("Title")->gameObject);
     durationSlider->GetComponent<UnityEngine::UI::LayoutElement*>()->preferredWidth = 40;
+    createSliderDefaultIndicator(durationSlider, defaultDuration);
 
     return horizontal->gameObject;
 }
@@ -223,20 +238,20 @@ void viewControllerDidActivate(HMUI::ViewController *self, bool firstActivation,
     auto* tableDurationLabel = BSML::Lite::CreateText(tableLabels, "Duration", {39, 0}, {20, 0});
     tableDurationLabel->verticalAlignment = TMPro::VerticalAlignmentOptions::Capline;
 
-    createStrengthDurationSlider(container, "UI", getBetterHapticsConfig().uiStrength.GetValue(), getBetterHapticsConfig().uiDuration.GetValue(), [](float value){getBetterHapticsConfig().uiStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().uiDuration.SetValue(value);});
-    createStrengthDurationSlider(container, "Notes", getBetterHapticsConfig().noteStrength.GetValue(), getBetterHapticsConfig().noteDuration.GetValue(), [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().noteDuration.SetValue(value);});
-    createStrengthDurationSlider(container, "Chain Heads", getBetterHapticsConfig().chainHeadStrength.GetValue(), getBetterHapticsConfig().chainHeadDuration.GetValue(), [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().chainHeadDuration.SetValue(value);});
-    createStrengthDurationSlider(container, "Chain Links", getBetterHapticsConfig().chainLinkStrength.GetValue(), getBetterHapticsConfig().chainLinkDuration.GetValue(), [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().chainLinkDuration.SetValue(value);});
-    createStrengthDurationSlider(container, "Arc Heads", getBetterHapticsConfig().arcHeadStrength.GetValue(), getBetterHapticsConfig().arcHeadDuration.GetValue(), [](float value){getBetterHapticsConfig().arcHeadStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().arcHeadDuration.SetValue(value);});
-    createStrengthDurationSlider(container, "Arc Tails", getBetterHapticsConfig().arcTailStrength.GetValue(), getBetterHapticsConfig().arcTailDuration.GetValue(), [](float value){getBetterHapticsConfig().arcTailStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().arcTailDuration.SetValue(value);});
-    createStrengthDurationSlider(container, "Arc Head & Tails", getBetterHapticsConfig().arcHeadTailStrength.GetValue(), getBetterHapticsConfig().arcHeadTailDuration.GetValue(), [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().arcHeadTailDuration.SetValue(value);});
-    createStrengthDurationSlider(container, "Bombs", getBetterHapticsConfig().bombStrength.GetValue(), getBetterHapticsConfig().bombDuration.GetValue(), [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().bombDuration.SetValue(value);});
-    createStrengthDurationSlider(container, "Bad Cuts", getBetterHapticsConfig().badCutStrength.GetValue(), getBetterHapticsConfig().badCutDuration.GetValue(), [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().badCutDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "UI", getBetterHapticsConfig().uiStrength.GetDefaultValue(), getBetterHapticsConfig().uiDuration.GetDefaultValue(), getBetterHapticsConfig().uiStrength.GetValue(), getBetterHapticsConfig().uiDuration.GetValue(), [](float value){getBetterHapticsConfig().uiStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().uiDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "Notes", getBetterHapticsConfig().noteStrength.GetDefaultValue(), getBetterHapticsConfig().noteDuration.GetDefaultValue(), getBetterHapticsConfig().noteStrength.GetValue(), getBetterHapticsConfig().noteDuration.GetValue(), [](float value){getBetterHapticsConfig().noteStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().noteDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "Chain Heads", getBetterHapticsConfig().chainHeadStrength.GetDefaultValue(), getBetterHapticsConfig().chainHeadDuration.GetDefaultValue(), getBetterHapticsConfig().chainHeadStrength.GetValue(), getBetterHapticsConfig().chainHeadDuration.GetValue(), [](float value){getBetterHapticsConfig().chainHeadStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().chainHeadDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "Chain Links", getBetterHapticsConfig().chainLinkStrength.GetDefaultValue(), getBetterHapticsConfig().chainLinkDuration.GetDefaultValue(), getBetterHapticsConfig().chainLinkStrength.GetValue(), getBetterHapticsConfig().chainLinkDuration.GetValue(), [](float value){getBetterHapticsConfig().chainLinkStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().chainLinkDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "Arc Heads", getBetterHapticsConfig().arcHeadStrength.GetDefaultValue(), getBetterHapticsConfig().arcHeadDuration.GetDefaultValue(), getBetterHapticsConfig().arcHeadStrength.GetValue(), getBetterHapticsConfig().arcHeadDuration.GetValue(), [](float value){getBetterHapticsConfig().arcHeadStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().arcHeadDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "Arc Tails", getBetterHapticsConfig().arcTailStrength.GetDefaultValue(), getBetterHapticsConfig().arcTailDuration.GetDefaultValue(), getBetterHapticsConfig().arcTailStrength.GetValue(), getBetterHapticsConfig().arcTailDuration.GetValue(), [](float value){getBetterHapticsConfig().arcTailStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().arcTailDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "Arc Head & Tails", getBetterHapticsConfig().arcHeadTailStrength.GetDefaultValue(), getBetterHapticsConfig().arcHeadTailDuration.GetDefaultValue(), getBetterHapticsConfig().arcHeadTailStrength.GetValue(), getBetterHapticsConfig().arcHeadTailDuration.GetValue(), [](float value){getBetterHapticsConfig().arcHeadTailStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().arcHeadTailDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "Bombs", getBetterHapticsConfig().bombStrength.GetDefaultValue(), getBetterHapticsConfig().bombDuration.GetDefaultValue(), getBetterHapticsConfig().bombStrength.GetValue(), getBetterHapticsConfig().bombDuration.GetValue(), [](float value){getBetterHapticsConfig().bombStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().bombDuration.SetValue(value);});
+    createStrengthDurationSlider(container, "Bad Cuts", getBetterHapticsConfig().badCutStrength.GetDefaultValue(), getBetterHapticsConfig().badCutDuration.GetDefaultValue(), getBetterHapticsConfig().badCutStrength.GetValue(), getBetterHapticsConfig().badCutDuration.GetValue(), [](float value){getBetterHapticsConfig().badCutStrength.SetValue(value);}, [](float value){getBetterHapticsConfig().badCutDuration.SetValue(value);});
 
     constexpr float increment = 0.05;
-    createStrengthSlider(container, "Arcs", getBetterHapticsConfig().arcStrength.GetValue(), [](float value){getBetterHapticsConfig().arcStrength.SetValue(value);});
-    createStrengthSlider(container, "Walls", getBetterHapticsConfig().wallStrength.GetValue(), [](float value){getBetterHapticsConfig().wallStrength.SetValue(value);});
-    createStrengthSlider(container, "Saber Clash", getBetterHapticsConfig().saberClashStrength.GetValue(), [](float value){getBetterHapticsConfig().saberClashStrength.SetValue(value);});
+    createStrengthSlider(container, "Arcs", getBetterHapticsConfig().arcStrength.GetDefaultValue(), getBetterHapticsConfig().arcStrength.GetValue(), [](float value){getBetterHapticsConfig().arcStrength.SetValue(value);});
+    createStrengthSlider(container, "Walls", getBetterHapticsConfig().wallStrength.GetDefaultValue(), getBetterHapticsConfig().wallStrength.GetValue(), [](float value){getBetterHapticsConfig().wallStrength.SetValue(value);});
+    createStrengthSlider(container, "Saber Clash", getBetterHapticsConfig().saberClashStrength.GetDefaultValue(), getBetterHapticsConfig().saberClashStrength.GetValue(), [](float value){getBetterHapticsConfig().saberClashStrength.SetValue(value);});
 }
 
 // Called later on in the game loading - a good time to install function hooks
