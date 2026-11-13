@@ -1,9 +1,25 @@
 # BetterHaptics
 
-Reverts haptic feedback changes without breaking arc and chain notes.
+Full control over haptics for UI, note types, and more.
 
-Use `qpm s build` to build
-Same goes for `qpm s copy` and `qpm s qmod`
+- User interface
+- Normal notes
+- Chain heads
+- Chain links
+- Arc heads
+- Arc tails
+- Arc head & tails
+- Bombs
+- Bad cuts
+- Arcs
+- Walls
+- Saber clash
+
+## Building
+
+Use `qpm s build` to build.
+
+Same goes for `qpm s copy` and `qpm s qmod`.
 
 ## Credits
 
