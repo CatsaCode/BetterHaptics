@@ -219,7 +219,8 @@ void createSliderDefaultIndicator(BSML::SliderSetting* sliderSetting, float defa
     UnityEngine::GameObject::Destroy(defaultIndicatorContainer->transform->Find("Value")->gameObject);
 
     auto defaultIndicator = defaultIndicatorContainer->transform->Find("Handle");
-    defaultIndicator->GetComponent<UnityEngine::RectTransform*>()->anchoredPosition = {defaultValue * 33, 0};
+    defaultIndicator->GetComponent<UnityEngine::RectTransform*>()->anchoredPosition = {
+        33 * (defaultValue - sliderSetting->slider->minValue) / (sliderSetting->slider->maxValue - sliderSetting->slider->minValue), 0};
     defaultIndicator->GetComponent<HMUI::ImageView*>()->color = {1, 1, 1, 0.25};
 }
 
@@ -247,7 +248,7 @@ UnityEngine::GameObject* createStrengthDurationSlider(const BSML::Lite::Transfor
     strengthSlider->GetComponent<UnityEngine::UI::LayoutElement*>()->preferredWidth = 65;
     createSliderDefaultIndicator(strengthSlider, defaultStrength);
 
-    auto* durationSlider = BSML::Lite::CreateSliderSetting(horizontal, label, 0.01, currentDuration, 0, 1, onDurationChange);
+    auto* durationSlider = BSML::Lite::CreateSliderSetting(horizontal, label, 0.01, currentDuration, 0.01, 1, onDurationChange);
     UnityEngine::GameObject::Destroy(durationSlider->transform->Find("Title")->gameObject);
     durationSlider->GetComponent<UnityEngine::UI::LayoutElement*>()->preferredWidth = 40;
     createSliderDefaultIndicator(durationSlider, defaultDuration);
