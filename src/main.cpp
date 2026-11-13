@@ -226,7 +226,8 @@ void createSliderDefaultIndicator(BSML::SliderSetting* sliderSetting, float defa
     UnityEngine::GameObject::Destroy(defaultIndicatorContainer->transform->Find("Value")->gameObject);
 
     auto defaultIndicator = defaultIndicatorContainer->transform->Find("Handle");
-    defaultIndicator->GetComponent<UnityEngine::RectTransform*>()->anchoredPosition = {defaultValue * 33, 0};
+    defaultIndicator->GetComponent<UnityEngine::RectTransform*>()->anchoredPosition = {
+        33 * (defaultValue - sliderSetting->slider->minValue) / (sliderSetting->slider->maxValue - sliderSetting->slider->minValue), 0};
     defaultIndicator->GetComponent<HMUI::ImageView*>()->color = {1, 1, 1, 0.25};
 }
 
